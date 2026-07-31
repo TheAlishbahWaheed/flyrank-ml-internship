@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Pages Deserve a Second Look? Ranking Content Refresh Priority from Observed Search Signals</title>
+<style>
+  :root {
+    --ink: #1c1c1e;
+    --sub: #55565c;
+    --line: #e2e0da;
+    --paper: #fbfaf7;
+    --accent: #8a3b2b;
+    --accent-soft: #f4e9e2;
+    --good: #2f6b4f;
+    --good-soft: #e7f1ec;
+    --warn: #9c6b12;
+    --warn-soft: #faf1de;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.65;
+    font-size: 18px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 120px; }
+  header.masthead {
+    max-width: 760px; margin: 0 auto; padding: 64px 24px 32px;
+    border-bottom: 1px solid var(--line);
+  }
+  .kicker {
+    font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.12em;
+    font-size: 12.5px; color: var(--accent); margin: 0 0 18px;
+  }
+  h1 {
+    font-size: 2.15rem; line-height: 1.22; margin: 0 0 18px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .byline { font-family: var(--mono); font-size: 14px; color: var(--sub); margin: 0; }
+  .byline a { color: var(--sub); }
+  nav.toc {
+    max-width: 760px; margin: 28px auto 0; padding: 0 24px;
+    font-family: var(--mono); font-size: 13px; color: var(--sub);
+  }
+  nav.toc ol { columns: 2; padding-left: 18px; margin: 8px 0 0; }
+  nav.toc a { color: var(--sub); text-decoration: none; border-bottom: 1px dotted var(--line); }
+  nav.toc a:hover { color: var(--accent); }
+
+  section { padding-top: 52px; }
+  section h2 {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 4px; font-weight: 600;
+  }
+  section h2 .num { color: var(--sub); margin-right: 8px; }
+  section h3.title { font-size: 1.5rem; font-weight: 600; margin: 2px 0 20px; letter-spacing: -0.01em; }
+  p { margin: 0 0 16px; }
+  .lede { font-size: 1.12rem; color: var(--ink); }
+  strong { font-weight: 650; }
+  a { color: var(--accent); }
+
+  .abstract {
+    background: var(--accent-soft); border: 1px solid #e6d3c8; border-radius: 10px;
+    padding: 26px 28px; margin-top: 22px; font-size: 1.01rem;
+  }
+  .abstract .lbl { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px; display:block; }
+
+  table { width: 100%; border-collapse: collapse; margin: 18px 0 22px; font-size: 15.5px; }
+  caption { caption-side: bottom; text-align: left; font-size: 13.5px; color: var(--sub);
+    font-family: var(--mono); margin-top: 8px; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--sub); border-bottom: 2px solid var(--ink); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.hl { color: var(--good); font-weight: 650; }
+  td.rk { color: var(--sub); }
+
+  figure { margin: 24px 0 30px; text-align: center; }
+  figure img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+  figcaption { font-family: var(--mono); font-size: 13px; color: var(--sub); margin-top: 10px;
+    text-align: left; }
+  figcaption .take { color: var(--ink); font-family: var(--serif); font-size: 15px; display:block; margin-top:4px; }
+
+  .callout {
+    border-left: 3px solid var(--accent); padding: 4px 0 4px 18px; margin: 20px 0;
+    font-size: 16.5px; color: var(--ink);
+  }
+  .box {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px 22px; margin: 18px 0;
+  }
+  .box h4 { margin: 0 0 10px; font-size: 15px; font-family: var(--mono); text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--sub); }
+  .flag { display:inline-block; font-family: var(--mono); font-size: 11.5px; padding: 2px 8px;
+    border-radius: 20px; margin-left: 8px; vertical-align: middle; }
+  .flag.good { background: var(--good-soft); color: var(--good); }
+  .flag.warn { background: var(--warn-soft); color: var(--warn); }
+
+  ol.playbook { padding-left: 22px; }
+  ol.playbook li { margin-bottom: 14px; }
+  ol.playbook .meta { display:block; font-family: var(--mono); font-size: 13px; color: var(--sub); margin-top: 3px;}
+
+  code { font-family: var(--mono); background: #efece4; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+  pre { background: #211f1c; color: #eee8dc; padding: 16px 18px; border-radius: 8px;
+    overflow-x: auto; font-size: 14px; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: inherit; }
+
+  ul.clean { padding-left: 20px; }
+  ul.clean li { margin-bottom: 8px; }
+
+  footer.credit {
+    max-width: 760px; margin: 60px auto 0; padding: 28px 24px 60px;
+    border-top: 1px solid var(--line); font-size: 15px; color: var(--sub);
+  }
+  footer.credit a { color: var(--accent); font-weight: 600; }
+
+  @media (max-width: 600px) {
+    body { font-size: 16.5px; }
+    h1 { font-size: 1.6rem; }
+    header.masthead { padding: 44px 20px 26px; }
+    nav.toc ol { columns: 1; }
+    table { font-size: 13.5px; }
+    th, td { padding: 7px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <p class="kicker">FlyRank ML Internship &middot; Search Intelligence Capstone</p>
+  <h1>Which Pages Deserve a Second Look? Ranking Content Refresh Priority from Observed Search Signals</h1>
+  <p class="byline">Capstone research paper &middot; <a href="https://github.com/TheAlishbahWaheed/flyrank-ml-internship">github.com/TheAlishbahWaheed/flyrank-ml-internship</a></p>
+</header>
+
+<nav class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#intro">Introduction / Problem</a></li>
+    <li><a href="#data">Data</a></li>
+    <li><a href="#method">Methodology</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#limits">Limitations &amp; Honest Framing</a></li>
+    <li><a href="#recs">Ranked Recommendations</a></li>
+    <li><a href="#repro">Reproducibility</a></li>
+    <li><a href="#credit">Acknowledgments &amp; Data Credit</a></li>
+  </ol>
+</nav>
+
+<div class="wrap">
+
+  <section id="abstract" style="padding-top:40px;">
+    <div class="abstract">
+      <span class="lbl">Abstract</span>
+      Content teams have to decide, every week, which of thousands of existing pages to review first —
+      but a simple staleness rule is a guess dressed up as a process. Working from a 30,000-page,
+      32-client anonymized slice of FlyRank search-performance data, this paper builds a ranking model
+      that scores pages by observed decline risk and compares it, on the exact same held-out clients, to a
+      transparent staleness-plus-visibility baseline. Under an honest client-grouped split, the trained
+      model roughly doubles the baseline's precision in the top ranks (precision@10: 0.90 vs. 0.60; ROC-AUC
+      0.61 vs. 0.49) — but that same honesty check also shows the model's apparent skill nearly halves
+      the moment brand-new clients enter the picture, which is the paper's central, unglamorous finding.
+      The output is a ranked, reason-coded action queue with confidence tiers, meant to order a human
+      reviewer's queue — not to publish, rewrite, or decide anything on its own.
+    </div>
+  </section>
+
+  <section id="intro">
+    <h2><span class="num">01</span>Introduction &amp; Problem</h2>
+    <h3 class="title">The queue problem</h3>
+    <p class="lede">A content team managing a few thousand live pages cannot review all of them
+    every week. Someone has to pick which pages get a second look first — and today that pick is
+    usually a hand-written rule ("anything untouched for 90 days") or a gut call.</p>
+    <p>The cost of getting the pick wrong runs in both directions. Spend a reviewer's morning on a
+    page that was never actually declining, and a genuinely slipping page sits untouched for another
+    month. This capstone asks a narrower, checkable version of that problem: <strong>using only
+    observed, page-level search and content signals, can a model rank pages by decline risk better
+    than a transparent rule can — and by how much, once the comparison is made honest?</strong></p>
+    <p>The deliverable is not a black box. It is a ranked queue with a reason code attached to every
+    row, built so a FlyRank content editor can see <em>why</em> a page was flagged, agree or disagree
+    with the model in seconds, and act — or not — on their own judgment.</p>
+  </section>
+
+  <section id="data">
+    <h2><span class="num">02</span>Data</h2>
+    <h3 class="title">One 90-day, 32-client cross-section — not the full warehouse</h3>
+    <p>This project uses the internship's bundled <strong>anonymized starter release</strong>,
+    <code>data/raw/content_refresh_anonymized.csv</code> — <strong>30,000 rows, one row per
+    pseudonymized content page</strong> (<code>content_id</code>), drawn from <strong>32 pseudonymized
+    clients</strong> (<code>client_id</code>). Row counts per client range from 3 to 7,008 — an
+    unbalanced panel, not a clean sample of "one client, one weight." This is the smaller starter
+    slice of the internship's data, not the full <code>FlyRank/internship-warehouse</code> release
+    on Hugging Face (~79M rows, monthly-partitioned); that gated warehouse was not queried for this
+    paper, and every number below traces back to the 30,000-row slice only.</p>
+    <p>The performance metrics (impressions, clicks, sessions, CTR, average position, engagement and
+    scroll rates) are aggregated over a <strong>trailing 90-day window ending at export</strong>, with
+    two narrower sub-windows (<code>*_last_30d</code>, <code>*_prev_30d</code>) for trend comparison.
+    Two lifecycle fields run on a longer, separate clock: <code>content_age_days</code> (90–564 days)
+    and <code>days_since_last_update</code> (1–373 days). This is a <strong>single snapshot</strong> —
+    one row per page, no repeated observations over time — so the data describes the current 90 days,
+    not a page's full history.</p>
+
+    <div class="box">
+      <h4>What was excluded, and why</h4>
+      <ul class="clean">
+        <li><strong>Client names, domains, URLs, page titles, and raw queries</strong> — never present
+        in the release; only hashed <code>content_id</code>/<code>client_id</code> remain, used for
+        grouping only, never as model features.</li>
+        <li><strong><code>trend_direction</code> and <code>trend_pct</code></strong> — these define the
+        label itself, so they can never also be inputs.</li>
+        <li><strong><code>impressions_last_30d</code> / <code>_prev_30d</code> and the click/session
+        equivalents</strong> — the trend label is built from exactly these windows; they were used to
+        <em>define</em> the target, not to predict it.</li>
+        <li><strong>FlyRank's product decision flags</strong> (<code>health_score</code>,
+        <code>needs_ctr_fix</code>, <code>is_quick_win</code>) — intentionally absent from the release,
+        so this model is built from observable evidence, not a copy of an existing product decision.</li>
+      </ul>
+    </div>
+    <p>Missingness is not random: <code>word_count</code>/<code>char_count</code> are complete for
+    <em>comparison article</em> and <em>feedly article</em> rows but ~28% missing for
+    <em>keyword article</em> — 90.7% of the dataset by row count. A blind <code>fillna(0)</code> would
+    silently tell the model "this page has zero words." The fix used throughout is an explicit
+    <code>has_word_count</code> flag alongside the filled value, so missingness stays visible to the model
+    instead of being erased.</p>
+  </section>
+
+  <section id="method">
+    <h2><span class="num">03</span>Methodology</h2>
+    <h3 class="title">A ranking task, an honest split, and a label that isn't quietly leaking</h3>
+
+    <p><strong>Framing.</strong> This is a ranking problem — <em>which pages first?</em> — scored with
+    precision@K. The modeled target, <code>is_declining_label</code>, is 1 when
+    <code>trend_direction == "down"</code> (base rate 0.542 across all 30,000 rows): an observed
+    label from the data, not an invented rule.</p>
+
+    <p><strong>Baseline.</strong> A transparent rule, built first and never touching the label:
+    flag a page when it sits in the <code>91–180</code> day staleness tier <em>and</em> the
+    <code>moderate</code>/<code>good</code> impression tier, score it by <code>impressions_90d</code>,
+    and rank descending. It is the same "stale + visible" logic behind FlyRank's own refresh flags —
+    tested first against the audit label (Signal 1: decline rate is 51.1% at 0–30 days vs. 61.1% at
+    91–180 days) before it was trusted as a baseline.</p>
+
+    <p><strong>Features (29 total).</strong> Demand fields (<code>search_volume</code>,
+    <code>competition</code>, <code>cpc</code>), content fields (<code>word_count</code>,
+    <code>char_count</code> and log-transformed 90-day traffic counts), lifecycle fields
+    (<code>content_age_days</code>, <code>days_since_last_update</code>), current-state rates
+    (<code>ctr</code>, <code>avg_position</code>, <code>engagement_rate</code>, <code>scroll_rate</code>,
+    <code>ai_traffic_pct</code>), and three <code>has_*</code> missingness flags. Explicitly excluded:
+    <code>trend_direction</code>, <code>trend_pct</code>, every <code>*_last_30d</code>/<code>*_prev_30d</code>
+    column, plus the ID columns.</p>
+
+    <p><strong>Models.</strong> Logistic Regression (a readable, coefficient-per-feature start) and
+    Random Forest (<code>max_depth=8</code>, <code>min_samples_leaf=20</code> — deliberately shallow,
+    since 30k rows across only 32 clients invites memorizing client quirks rather than learning a
+    transferable signal).</p>
+
+    <p><strong>Validation design — the part that separates this from a leaderboard number.</strong>
+    Split by <code>client_id</code> with <code>GroupShuffleSplit</code> (75/25, <code>random_state=42</code>),
+    so every client's pages land entirely in train or entirely in test — zero client overlap. This
+    matters because 30,000 rows come from just 32 clients: a naive random row split lets the model
+    partly memorize client-level quirks instead of learning something that generalizes to a brand it
+    has never seen.</p>
+
+    <div class="callout">To make that choice honest rather than assumed, the identical pipeline was
+    re-run once under a naive random split and once under the client-grouped split. ROC-AUC dropped
+    from <strong>0.752</strong> (naive, 31 of 32 clients leaking across train/test) to
+    <strong>0.603</strong> (grouped, zero overlap) — a <strong>+0.149</strong> point drop purely from
+    closing the leak. Every result reported below is the honest, grouped number.</div>
+
+    <p><strong>Leakage checks.</strong> (1) The 90-day feature windows structurally contain the 30-day
+    windows the label is built from (100% of rows satisfy
+    <code>last_30d + prev_30d ≤ 90d</code>; correlation 0.918) — a soft, disclosed risk, not
+    fatal: dropping every <code>*_90d</code> feature changed grouped AUC by only
+    <strong>-0.008</strong> (0.603 → 0.595). (2) As a sanity check, deliberately adding
+    <code>trend_pct</code> and the last/prev-30d windows back into the feature set — the columns
+    the label is directly built from — pushed AUC to a suspicious <strong>1.000</strong>, confirming
+    the leakage-detection method works and that the reported 0.603 is not hiding a similar leak.
+    (3) No column names in the release match FlyRank's own product-flag naming pattern.</p>
+  </section>
+
+  <section id="results">
+    <h2><span class="num">04</span>Results</h2>
+    <h3 class="title">Model vs. baseline, same held-out clients</h3>
+    <p>Both models and the baseline were scored on the identical grouped test split — 7,115 pages
+    from 8 clients never seen in training (test base rate 0.517).</p>
+
+    <table>
+      <caption>Precision@K and ROC-AUC, grouped client-holdout split. Base rate 0.517 throughout.</caption>
+      <thead>
+        <tr><th>K</th><th>Baseline (rule)</th><th>Logistic Regression</th><th>Random Forest</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>10</td><td>0.60</td><td class="hl">0.90</td><td>0.40</td></tr>
+        <tr><td>20</td><td>0.45</td><td class="hl">0.80</td><td>0.55</td></tr>
+        <tr><td>50</td><td>0.38</td><td class="hl">0.74</td><td>0.54</td></tr>
+        <tr><td>100</td><td>0.32</td><td class="hl">0.71</td><td>0.56</td></tr>
+        <tr><td>200</td><td>0.44</td><td class="hl">0.67</td><td>0.565</td></tr>
+        <tr><td>ROC-AUC</td><td>0.492</td><td class="hl">0.61</td><td>0.603</td></tr>
+      </tbody>
+    </table>
+
+    <p>On this particular grouped split, <strong>Logistic Regression edged out Random Forest</strong>
+    at every rank depth — a useful, slightly humbling result in its own right (a simple, readable
+    model outperformed a more complex one here). Random Forest was still carried forward as the
+    production scorer for two reasons: the Week-4 signal audit found non-monotonic staleness and
+    impression-tier patterns a linear model can't represent, and a single grouped split is one draw
+    from a 32-client population small enough that model rankings can flip on the next draw. To
+    reduce that single-split noise, the final action queue is scored with <strong>5-fold client-grouped
+    out-of-fold (OOF) predictions</strong> from the Random Forest: cross-validated AUC
+    <strong>0.673</strong>, fold range <strong>0.602–0.735</strong> — the spread itself is a finding
+    (expect swings this size with only 32 clients, not model instability).</p>
+
+    <figure>
+      <img src="figures/precision_at_k.png" alt="Precision at K for the ranked action queue, out-of-fold Random Forest scores, compared to the dataset base rate">
+      <figcaption>Precision@K for the deployed (OOF, whole-population) queue.
+        <span class="take">Precision climbs from 0.40 at K=50 to 0.71 at K=1000 as the queue widens — most of this model's value shows up in batches of hundreds, not a handful of top picks.</span>
+      </figcaption>
+    </figure>
+
+    <h3 class="title" style="margin-top:36px; font-size:1.2rem;">What the model leans on</h3>
+    <p>Top Random Forest feature importances: <code>days_with_impressions</code> (0.154),
+    <code>log_impressions_90d</code> (0.139), <code>avg_position</code> (0.105),
+    <code>content_age_days</code> (0.089), <code>char_count</code> (0.043), <code>word_count</code>
+    (0.041). In the Logistic Regression run, the strongest coefficients pointed the same direction
+    a reviewer would expect: busier pages (<code>log_impressions_90d</code>, positive) skew toward
+    the "declining" label, while already-winning pages (<code>position_tier_top_3</code>,
+    <code>impression_tier_excellent</code>, both negative) skew away from it — no single feature
+    dominated near-perfect probability by itself, the leakage sanity check both models pass.</p>
+
+    <h3 class="title" style="margin-top:36px; font-size:1.2rem;">Turning scores into archetypes</h3>
+    <p>OOF probabilities plus five transparent, threshold-based reason codes group every page into
+    one of eight named archetypes:</p>
+
+    <figure>
+      <img src="figures/archetype_counts.png" alt="Bar chart of page counts by archetype group">
+      <figcaption>Page counts by archetype (30,000 pages, whole dataset).
+        <span class="take">Most pages (56.9%) carry no flag at all ("Steady / No Flag") — the queue is deliberately selective, not a blanket alarm.</span>
+      </figcaption>
+    </figure>
+    <figure>
+      <img src="figures/archetype_decline_rate.png" alt="Bar chart of observed decline rate by archetype group">
+      <figcaption>Observed decline rate by archetype, against the 54.2% dataset base rate.
+        <span class="take">"Stale Workhorse," "Visible But Under-Clicked," and "General Decline Risk" all sit ~15-19 points above base rate; "No Real Demand" and "Champion" both sit well below it.</span>
+      </figcaption>
+    </figure>
+
+    <table>
+      <caption>Archetype summary. "Thin But Wanted" (n=1) omitted — too small to report a rate.</caption>
+      <thead>
+        <tr><th>Archetype</th><th>n</th><th>Decline rate</th><th>Avg. score</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Steady / No Flag</td><td>17,062</td><td>0.511</td><td>0.507</td></tr>
+        <tr><td>General Decline Risk</td><td>3,555</td><td>0.692</td><td>0.700</td></tr>
+        <tr><td>Champion (protect)</td><td>2,647</td><td>0.471</td><td>0.541</td></tr>
+        <tr><td>Visible But Under-Clicked</td><td>2,582</td><td>0.686</td><td>0.696</td></tr>
+        <tr><td>Stale Workhorse</td><td>2,254</td><td>0.687</td><td>0.702</td></tr>
+        <tr><td>No Real Demand</td><td>1,678</td><td>0.217</td><td>0.295</td></tr>
+        <tr><td>Disengaging Reader</td><td>221</td><td>0.692</td><td>0.701</td></tr>
+      </tbody>
+    </table>
+
+    <p>Every row also carries a <strong>confidence tier</strong>: high confidence requires both a
+    flagged decline risk (probability ≥ 0.65) <em>and</em> real traffic (≥500 impressions, ≥10
+    sessions) — 3,176 rows (10.6%). Medium confidence covers 18,228 rows (60.8%); low confidence
+    covers 8,596 rows (28.7%) and should not drive a standalone action on its own.</p>
+  </section>
+
+  <section id="limits">
+    <h2><span class="num">05</span>Limitations &amp; Honest Framing</h2>
+    <ul class="clean">
+      <li><strong>Modest, not strong, discrimination.</strong> Grouped ROC-AUC of 0.603 is better
+      than chance (0.5) but well short of a strong classifier; precision@50 (0.540) sits barely
+      above that split's own base rate (0.517). Most of this model's value shows up across hundreds
+      of ranked rows, not the very top picks.</li>
+      <li><strong>Cross-client generalization is the real weak point</strong>, not model choice.
+      The naive-vs-grouped check (Section 3) found ROC-AUC fell from 0.752 to 0.603 the moment
+      client leakage was removed — the honest number is meaningfully weaker than a careless one,
+      and any future re-run should keep reporting both.</li>
+      <li><strong>One content type dominates.</strong> <em>Keyword article</em> is 90.7% of rows;
+      findings may not transfer cleanly to the other two content types, which are too thin here to
+      evaluate separately with confidence.</li>
+      <li><strong>Single 90-day snapshot, not a trajectory.</strong> One row per page means the
+      model sees the current 90 days, not how a page's metrics moved over its life — the label is a
+      trend proxy, not a verified outcome tracked forward.</li>
+      <li><strong>Not the full production warehouse.</strong> This paper used the 30,000-row
+      anonymized starter slice, not the ~79M-row <code>FlyRank/internship-warehouse</code> release —
+      findings describe this slice and should be treated as a pilot, not a claim about FlyRank's
+      full content base.</li>
+      <li><strong>No causal claims.</strong> Every finding here is an observed association in
+      cross-sectional data. Nothing in this paper shows that refreshing a flagged page <em>causes</em>
+      recovery, and nothing here models or predicts a search engine's ranking algorithm.</li>
+    </ul>
+  </section>
+
+  <section id="recs">
+    <h2><span class="num">06</span>Ranked Recommendations</h2>
+    <h3 class="title">The action playbook</h3>
+    <p>Ordered by the combination of observed decline rate and group size — the largest, most
+    reliably-elevated-risk groups first:</p>
+    <ol class="playbook">
+      <li><strong>Stale Workhorse — refresh first.</strong> 2,254 pages, 68.7% observed decline rate,
+      real traffic already flowing. Staleness and visibility agree with the model here; this is
+      the highest-confidence "go" group.
+        <span class="meta">action: refresh_priority · reason: model_decline_risk + stale_and_visible</span></li>
+      <li><strong>General Decline Risk — review in batches.</strong> 3,555 pages, 69.2% decline
+      rate, flagged primarily by the model rather than a single obvious rule. Largest actionable
+      group; work it in confidence-tiered batches, not all at once.
+        <span class="meta">action: refresh_review · reason: model_decline_risk</span></li>
+      <li><strong>Visible But Under-Clicked — cheap fix first.</strong> 2,582 pages, 68.6% decline
+      rate, high demand but low CTR. Try a title/meta rewrite before a full content rewrite —
+      lower cost, faster to test.
+        <span class="meta">action: rewrite_title_and_meta · reason: high_demand_low_ctr</span></li>
+      <li><strong>Disengaging Reader — small but worth a look.</strong> Only 221 pages, but the
+      highest decline rate observed (69.2%) alongside a real engagement drop signal.
+        <span class="meta">action: review_engagement_and_layout · reason: low_engagement</span></li>
+      <li><strong>Champion (protect) — explicit no-go list.</strong> 2,647 pages, already winning
+      (top position, high CTR). Do not touch based on this queue; a "refresh" here risks breaking
+      something that works.
+        <span class="meta">action: protect_do_not_touch · reason: already_winning</span></li>
+      <li><strong>No Real Demand — deprioritize.</strong> 1,678 pages with low decline rate (21.7%)
+      and no real search demand behind them. Not worth review time now.
+        <span class="meta">action: monitor_only · reason: no_real_demand</span></li>
+      <li><strong>Steady / No Flag — leave alone.</strong> 17,062 pages, the bulk of the site,
+      sitting near base rate with no flag raised. Revisit on the next scheduled pass.
+        <span class="meta">action: monitor</span></li>
+    </ol>
+
+    <div class="box">
+      <h4>Before anyone acts on a row</h4>
+      <ul class="clean">
+        <li>Confirm the reason code against the live page — the data can't tell a real CTR problem
+        from a redirect, a duplicate, or a page whose intent has quietly shifted.</li>
+        <li>Check confidence first. Only the 10.6% high-confidence rows are close to
+        act-with-minimal-review; medium and low confidence rows need a human look before any
+        resourcing decision.</li>
+        <li>Bring editorial and brand context the model never sees — legal pages, intentionally
+        seasonal content, pages still ramping up, pages already mid-refresh.</li>
+        <li>Treat the output as an ordering aid for a human queue, never an auto-publish or
+        auto-rewrite trigger.</li>
+      </ul>
+    </div>
+
+    <p><strong>Watch for staleness in the model itself:</strong> retrain when a new data window
+    lands or roughly once a quarter (the label is a 30-day trend, a moving target); retrain sooner
+    if the population shifts meaningfully in <code>content_age_days</code> or
+    <code>word_count_tier</code> mix, or if a wave of brand-new clients arrives with no training
+    history — exactly the population this model is weakest on. Between retrains, watch the 5-fold
+    AUC spread (currently 0.602–0.735); a much wider spread on a future run signals the client
+    population has outgrown what the model can track.</p>
+  </section>
+
+  <section id="repro">
+    <h2><span class="num">07</span>Reproducibility</h2>
+    <p>Every number in this paper traces back to a committed notebook. Run <code>pip install -r
+    requirements.txt</code>, then work through, in order:</p>
+    <ul class="clean">
+      <li><code>work/notebooks/w04_baseline_score.ipynb</code> — the rule baseline and its
+      precision@K.</li>
+      <li><code>work/notebooks/w05_model.ipynb</code> — feature build, grouped split, Logistic
+      Regression vs. Random Forest vs. baseline (Results, Section 4).</li>
+      <li><code>work/notebooks/w06_validation_audit.ipynb</code> — the naive-vs-grouped honesty
+      check and the leakage audit (Section 3).</li>
+      <li><code>work/notebooks/w07_action_playbook.ipynb</code> — the 5-fold OOF scoring, archetypes,
+      confidence tiers, and the figures embedded above.</li>
+      <li><code>work/notebooks/capstone.ipynb</code> — the notebook this paper mirrors end to end.</li>
+    </ul>
+    <p>Random seed <code>42</code> throughout. All splits are grouped on <code>client_id</code> via
+    <code>sklearn.model_selection.GroupShuffleSplit</code> / <code>GroupKFold</code> — rerunning
+    with the same seed reproduces the same client assignment. Full notebook index, environment, and
+    the reference (unmodified) pipeline in <code>scripts/</code> are documented in the repo's
+    <a href="https://github.com/TheAlishbahWaheed/flyrank-ml-internship/blob/main/work/README.md">work/README.md</a>.</p>
+    <p>Repository: <a href="https://github.com/TheAlishbahWaheed/flyrank-ml-internship">github.com/TheAlishbahWaheed/flyrank-ml-internship</a></p>
+  </section>
+
+  </div>
+
+  <footer class="credit" id="credit">
+    <p><strong>Acknowledgments &amp; data credit.</strong> Built on the
+    <a href="https://flyrank.ai" target="_blank" rel="noopener">FlyRank ML Internship</a> dataset.
+    This paper uses FlyRank's bundled, anonymized starter release of search-performance data;
+    no client-identifying information appears anywhere above.</p>
+  </footer>
+
+</body>
+</html>
